@@ -1,0 +1,40 @@
+{
+  "name": "ling-sync",
+  "version": "0.2.14",
+  "private": true,
+  "type": "module",
+  "description": "灵同步 · 本地内容工作台与平台同步",
+  "scripts": {
+    "dev": "wxt --browser chromium",
+    "build": "wxt build --browser chrome && node scripts/package.mjs",
+    "typecheck": "wxt prepare && tsc --noEmit",
+    "test": "vitest run",
+    "verify": "node scripts/verify-build.mjs"
+  },
+  "engines": {
+    "node": ">=24.11 <25"
+  },
+  "dependencies": {
+    "@wxt-dev/module-react": "^1.2.2",
+    "dompurify": "^3.4.17",
+    "idb": "^8.0.4",
+    "lucide-react": "^1.56.0",
+    "marked": "^18.1.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "twitter-text": "3.1.0",
+    "wxt": "^0.21.4",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.3.5",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "^29.1.1",
+    "sharp": "^0.35.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.4"
+  }
+}

@@ -1,0 +1,18 @@
+import {beforeEach,afterEach,it,expect,vi} from 'vitest';
+import {webcrypto} from 'node:crypto';
+import {Blob} from 'node:buffer';
+import {nativePublicationResult,resultProfiles} from '../src/platforms/publication-result';
+import {normaliseSettings,capabilityFor} from '../src/core/model';
+const profile=resultProfiles.jike!;
+const sha=async(s:string)=>[...new Uint8Array(await webcrypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(v=>v.toString(16).padStart(2,'0')).join('');
+function fixture(){document.body.innerHTML='<div class="_contentWrapper_test"><div class="_content_test">独立测试\n\n正文</div><img class="_picture_test" src="https://cdn.test/one.png"><img class="_picture_test" src="https://cdn.test/two.png"></div>';for(const e of document.querySelectorAll<HTMLElement>('*'))e.getClientRects=()=>({length:1}) as DOMRectList;for(const img of document.querySelectorAll('img')){Object.defineProperty(img,'naturalWidth',{value:900});Object.defineProperty(img,'complete',{value:true});}}
+beforeEach(()=>{vi.stubGlobal('location',{origin:'https://web.okjike.com',pathname:'/u/owner/post/012345678901234567890123'});vi.stubGlobal('crypto',webcrypto);vi.stubGlobal('fetch',vi.fn(async(s:string)=>({ok:true,blob:async()=>new Blob([s.endsWith('one.png')?'one':'two'],{type:'image/png'})})));fixture();});
+afterEach(()=>vi.unstubAllGlobals());
+it('详情页完整正文与远程图片字节顺序匹配后才返回发布证据',async()=>{const r=await nativePublicationResult(profile,{text:'独立测试\n\n正文',images:[await sha('one'),await sha('two')],mediaCount:2,video:false},'read');expect(r).toMatchObject({id:'012345678901234567890123',mediaMatched:true,bodyMatched:true,mediaCount:2});});
+it('重复内容、图片换序及编辑器内容不得冒认发布结果',async()=>{const expected={text:'独立测试\n\n正文',images:[await sha('one'),await sha('two')],mediaCount:2,video:false};document.querySelector('img')!.src='https://cdn.test/two.png';await expect(nativePublicationResult(profile,expected,'read')).rejects.toThrow('顺序');fixture();document.body.insertAdjacentHTML('beforeend',document.querySelector('._contentWrapper_test')!.outerHTML);for(const e of document.querySelectorAll<HTMLElement>('*'))e.getClientRects=()=>({length:1}) as DOMRectList;await expect(nativePublicationResult(profile,expected,'read')).rejects.toThrow('唯一');fixture();document.querySelector('._content_test')!.setAttribute('contenteditable','true');await expect(nativePublicationResult(profile,expected,'read')).rejects.toThrow('唯一');});
+it('旧发布设置保持含义；仅本版已有公开核对证据的平台标记通过',()=>{expect(normaliseSettings({directPublishPlatforms:['jike']})).toMatchObject({directPublish:true,directPublishPlatforms:['jike']});expect(normaliseSettings({directPublish:false,directPublishPlatforms:['jike']})).toMatchObject({directPublish:false,directPublishPlatforms:['jike']});expect(normaliseSettings().directPublish).toBe(false);expect(capabilityFor('jike','post','publish')?.verification).toBe('verified');expect(capabilityFor('jike','post')?.operation).toBe('fill');expect(capabilityFor('xiaohongshu','post','publish')?.verification).toBe('pending');});
+
+it('即刻公开详情必须匹配当前账号与指定圈子，不能接受其他目标',async()=>{
+ const expected={text:'独立测试\n\n正文',images:[await sha('one'),await sha('two')],mediaCount:2,video:false,ownerPath:'/u/owner',targetId:'人工智能讨论组'};document.querySelector('._contentWrapper_test')!.insertAdjacentHTML('beforeend','<a href="/topic/circle">人工智能讨论组</a>');document.querySelector('a')!.getClientRects=()=>({length:1}) as DOMRectList;
+ expect(await nativePublicationResult(profile,expected,'read')).toMatchObject({mediaMatched:true});await expect(nativePublicationResult(profile,{...expected,targetId:'其他圈子'},'read')).rejects.toThrow('圈子');await expect(nativePublicationResult(profile,{...expected,ownerPath:'/u/another'},'read')).rejects.toThrow('账号');
+});

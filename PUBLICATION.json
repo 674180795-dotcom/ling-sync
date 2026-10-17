@@ -1,0 +1,10 @@
+{
+  "version": "0.2.14-dev.5",
+  "localSourceCommit": "841ed35fed63e996eea5b3686b9254d8932ecb0a",
+  "export": "Clean source snapshot; local operational history, account evidence, drafts, reference artifacts and research excluded.",
+  "changesFromLocal": [
+    "Removed local-only release:source and release:handoff package scripts."
+  ],
+  "testFiles": 36,
+  "passedTests": 368
+}

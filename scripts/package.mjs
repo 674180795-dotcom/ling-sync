@@ -1,0 +1,15 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+const root = path.resolve(import.meta.dirname,'..');
+const output=path.join(root,'.output/chrome-mv3');
+await fs.rm(path.join(root,'dist'),{recursive:true,force:true});
+await fs.cp(output,path.join(root,'dist'),{recursive:true});
+await fs.mkdir(path.join(root,'release'),{recursive:true});
+const manifest=JSON.parse(await fs.readFile(path.join(root,'dist/manifest.json'),'utf8'));
+const folder=/^\d+\.\d+\.\d+-dev\.\d+$/.test(manifest.version_name||'')?path.join('release',manifest.version_name):'release';
+await fs.mkdir(path.join(root,folder),{recursive:true});
+const zip=path.join(root,folder,'ling-sync.zip');await fs.rm(zip,{force:true});
+const result=spawnSync('/usr/bin/zip',['-q','-r',zip,'.'],{cwd:path.join(root,'dist'),stdio:'inherit'});
+if(result.status!==0)throw new Error('ZIP packaging failed');
+console.log('可加载扩展：dist/；分发包：'+path.relative(root,zip));
