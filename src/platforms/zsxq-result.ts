@@ -52,6 +52,17 @@ export async function nativeZsxqResult(expected:{targetId:string;text:string;ima
    const viewer=[...document.querySelectorAll<HTMLImageElement>('img.image.can-scale')].filter(e=>visible(e)&&identity(e.currentSrc||e.src)===identity(source));
    if(viewer.length!==1){img.click();return {waiting:true,verifiedMedia};}
    if(!viewer[0]!.complete||viewer[0]!.naturalWidth<=0)return {waiting:true,verifiedMedia};source=viewer[0]!.currentSrc||viewer[0]!.src;
+   // The viewer initially displays the already-loaded thumbnail while its normal
+   // preload image fetches the signed full-size resource. Do not reject that
+   // transient thumbnail as an irreversible pixel mismatch.
+   const preload=viewer[0]!.closest('.image-full-screen-container')?.querySelectorAll<HTMLImageElement>('img.preload');
+   if(preload?.length){
+    if(preload.length!==1)throw new Error('原图预加载入口不唯一');
+    const full=preload[0]!;
+    if(identity(full.currentSrc||full.src)!==mediaIdentity)throw new Error('原图预加载归属变化');
+    if(!full.complete||full.naturalWidth<=0)return {waiting:true,verifiedMedia};
+    source=full.currentSrc||full.src;
+   }
   }
   const u=new URL(source);if(u.protocol!=='https:')throw new Error('结果图片不是远程资源');const response=await fetch(u.href,{signal:AbortSignal.timeout(10000)});if(!response.ok)throw new Error('结果图片尚未核对');const blob=await response.blob();if(!blob.type.startsWith('image/')||blob.size>15*1024*1024)throw new Error('结果图片身份不明');
   const digest=[...new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))].map(v=>v.toString(16).padStart(2,'0')).join('');if(digest===expected.images[index]){verifiedMedia[index]={identity:mediaIdentity,proof:'bytes:'+digest};continue;}

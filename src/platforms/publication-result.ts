@@ -4,6 +4,7 @@ import {platformFor,platformOrigins,safeUrl,type PublishTask,type Evidence} from
 import {SyncError} from '../core/protocol';
 import {verifyZsxqPublication} from './zsxq-result';
 import {verifyWeixinPublication} from './weixin-result';
+import {verifyXPublication} from './x-result';
 export type ResultProfile={origin:string;body:string;mediaScope:string;images:string;detailPattern:string;};
 export const resultProfiles:Partial<Record<PublishTask['platform'],ResultProfile>>={
  jike:{origin:'https://web.okjike.com',body:'div[class^="_content_"]',mediaScope:'div[class^="_contentWrapper_"]',images:'img[class*="_picture_"]',detailPattern:'^/u/[^/]+/post/([a-f0-9]{24})$'},
@@ -33,6 +34,7 @@ export async function nativePublicationResult(profile:ResultProfile,expected:{te
 }
 export async function verifyPublication(task:PublishTask):Promise<Evidence>{
  if(task.platform==='zsxq')return verifyZsxqPublication(task);
+ if(task.platform==='x')return verifyXPublication(task);
  if(task.platform==='weixin')return verifyWeixinPublication(task);
  const profile=resultProfiles[task.platform];if(!profile)throw new SyncError('PUBLISH_RESULT_PENDING','此平台发布结果自动核对尚待适配，请保留任务并人工核对',false);
  const origins=platformOrigins(task.platform,task.snapshot.type).map(o=>o+'/*');if(!await chrome.permissions.contains({origins}))throw new SyncError('PERMISSION_REQUIRED','发布结果站点尚未授权',false);
